@@ -1,4 +1,4 @@
-import { sendJson } from "./_lib/http.js";
+import { sendJson } from "../lib/http.js";
 
 export default async function handler(req, res) {
   if (req.method !== "GET") return sendJson(res, 405, { error: "Method not allowed" });
