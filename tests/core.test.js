@@ -388,3 +388,197 @@ test("Vercel config contains two daily UTC triggers and valid function durations
   assert.equal(config.functions["api/telegram/webhook.js"].maxDuration, 300);
   assert.equal(config.functions["api/discord/interactions.js"].maxDuration, 60);
 });
+
+
+test("Supabase modern secret keys are sent only through the apikey header", async (t) => {
+  withEnv(t, {
+    SUPABASE_URL: "https://example.supabase.co",
+    SUPABASE_SECRET_KEY: "sb_secret_test-key",
+    SUPABASE_SERVICE_ROLE_KEY: undefined
+  });
+  let captured;
+  mockFetch(t, async (url, options) => {
+    captured = { url: String(url), options };
+    return responseJson([{ ...exercise, status: "published" }]);
+  });
+
+  await updateExercise(exercise.id, "pending", { status: "published" });
+  assert.equal(captured.options.headers.apikey, "sb_secret_test-key");
+  assert.equal(captured.options.headers.Authorization, undefined);
+});
+
+test("Daily cron dry-run generates, stores and sends a proposal without leaking its solution", async (t) => {
+  withEnv(t, {
+    CRON_SECRET: "cron-test-secret",
+    TELEGRAM_ADMIN_ID: "7654321",
+    TELEGRAM_BOT_TOKEN: "telegram-test-token",
+    SUPABASE_URL: "https://example.supabase.co",
+    SUPABASE_SECRET_KEY: "sb_secret_test-key",
+    SUPABASE_SERVICE_ROLE_KEY: undefined,
+    GEMINI_API_KEY: "gemini-test-key",
+    GEMINI_MODEL: "gemini-3.5-flash-lite"
+  });
+
+  const calls = [];
+  mockFetch(t, async (url, options = {}) => {
+    const target = String(url);
+    const method = options.method || "GET";
+    calls.push({ url: target, method, body: options.body ? JSON.parse(options.body) : undefined });
+
+    if (target.includes("generativelanguage.googleapis.com")) {
+      const request = JSON.parse(options.body);
+      const prompt = request.contents[0].parts[0].text;
+      const output = prompt.startsWith("Tu es un correcteur")
+        ? { valid: true, issue: "", improvement: "" }
+        : { ...exercise, id: undefined };
+      return responseJson({
+        candidates: [{ content: { parts: [{ text: JSON.stringify(output) }] } }]
+      });
+    }
+
+    if (target.includes("/rest/v1/exercises") && method === "GET") {
+      if (target.includes("select=statement")) return responseJson([]);
+      return responseJson([]);
+    }
+
+    if (target.includes("/rest/v1/exercises") && method === "POST") {
+      const inserted = JSON.parse(options.body);
+      return responseJson([{
+        ...inserted,
+        id: exercise.id,
+        telegram_chat_id: null,
+        telegram_message_id: null
+      }]);
+    }
+
+    if (target.includes("/rest/v1/exercises") && method === "PATCH") {
+      return responseJson([{
+        ...exercise,
+        status: "pending",
+        telegram_chat_id: "7654321",
+        telegram_message_id: 123
+      }]);
+    }
+
+    if (target.includes("api.telegram.org") && target.includes("/sendMessage")) {
+      return responseJson({ ok: true, result: { message_id: 123 } });
+    }
+
+    throw new Error(`Unexpected request: ${method} ${target}`);
+  });
+
+  const req = {
+    method: "GET",
+    headers: { authorization: "Bearer cron-test-secret" },
+    query: { force: "1" }
+  };
+  const res = makeResponse();
+  await cronHandler(req, res);
+
+  const result = JSON.parse(res.body);
+  assert.equal(res.statusCode, 200);
+  assert.equal(result.ok, true);
+  assert.equal(result.exerciseId, exercise.id);
+
+  const telegramSend = calls.find((call) => call.url.includes("/sendMessage"));
+  assert.ok(telegramSend, "The proposal should be sent to Telegram");
+  assert.match(telegramSend.body.text, /EXERCICE À VALIDER/);
+  assert.equal(telegramSend.body.text.includes(exercise.solution), false);
+  assert.equal(telegramSend.body.reply_markup.inline_keyboard[0].length, 2);
+
+  const insertCall = calls.find((call) => call.method === "POST" && call.url.includes("/rest/v1/exercises"));
+  assert.ok(insertCall);
+  assert.equal(insertCall.body.solution, exercise.solution);
+});
+
+test("Authorized Telegram approval publishes an exercise without including its solution in the channel", async (t) => {
+  withEnv(t, {
+    TELEGRAM_BOT_TOKEN: "telegram-test-token",
+    TELEGRAM_WEBHOOK_SECRET: "expected-secret",
+    TELEGRAM_ADMIN_ID: "7654321",
+    DISCORD_BOT_TOKEN: "discord-test-token",
+    DISCORD_CHANNEL_ID: "999999",
+    SUPABASE_URL: "https://example.supabase.co",
+    SUPABASE_SECRET_KEY: "sb_secret_test-key",
+    SUPABASE_SERVICE_ROLE_KEY: undefined
+  });
+
+  const calls = [];
+  mockFetch(t, async (url, options = {}) => {
+    const target = String(url);
+    const method = options.method || "GET";
+    const body = options.body ? JSON.parse(options.body) : undefined;
+    calls.push({ url: target, method, body });
+
+    if (target.includes("/rest/v1/exercises") && method === "GET") {
+      return responseJson([{ ...exercise, status: "pending" }]);
+    }
+    if (target.includes("/rest/v1/exercises") && method === "PATCH") {
+      if (target.includes("status=eq.pending")) {
+        return responseJson([{ ...exercise, status: "publishing" }]);
+      }
+      if (target.includes("status=eq.publishing")) {
+        return responseJson([{
+          ...exercise,
+          status: "published",
+          discord_message_id: "discord-message-100",
+          published_at: new Date().toISOString()
+        }]);
+      }
+    }
+    if (target.includes("discord.com/api/v10/channels/999999/messages")) {
+      return responseJson({ id: "discord-message-100" });
+    }
+    if (target.includes("api.telegram.org") && target.includes("/answerCallbackQuery")) {
+      return responseJson({ ok: true, result: true });
+    }
+    if (target.includes("api.telegram.org") && target.includes("/editMessageText")) {
+      return responseJson({ ok: true, result: true });
+    }
+    throw new Error(`Unexpected request: ${method} ${target}`);
+  });
+
+  const req = makeRequest({
+    callback_query: {
+      id: "callback-approval",
+      from: { id: 7654321 },
+      data: `publish:${exercise.id}`,
+      message: {
+        message_id: 44,
+        chat: { id: 7654321, type: "private" }
+      }
+    }
+  }, { "x-telegram-bot-api-secret-token": "expected-secret" });
+  const res = makeResponse();
+  await telegramHandler(req, res);
+
+  assert.equal(res.statusCode, 200);
+  const discordPost = calls.find((call) => call.url.includes("discord.com/api/v10/channels"));
+  assert.ok(discordPost, "Discord message should be posted");
+  assert.match(discordPost.body.embeds[0].description, /Trouver deux nombres/);
+  assert.equal(JSON.stringify(discordPost.body).includes(exercise.solution), false);
+  assert.equal(discordPost.body.components[0].components[0].label, "Solution");
+  const finalPatch = calls.find((call) => call.method === "PATCH" && call.url.includes("status=eq.publishing"));
+  assert.equal(finalPatch.body.status, "published");
+});
+
+test("Discord endpoint answers valid ping requests for Developer Portal verification", async (t) => {
+  const { publicKey, privateKey } = crypto.generateKeyPairSync("ed25519");
+  const spki = publicKey.export({ format: "der", type: "spki" });
+  withEnv(t, { DISCORD_PUBLIC_KEY: spki.subarray(-32).toString("hex") });
+  mockFetch(t, async () => { throw new Error("A ping must not call external APIs"); });
+
+  const rawBody = Buffer.from(JSON.stringify({ type: 1 }));
+  const { timestamp, signature } = signDiscordBody(rawBody, privateKey);
+  const req = Readable.from([rawBody]);
+  req.method = "POST";
+  req.headers = {
+    "x-signature-ed25519": signature,
+    "x-signature-timestamp": timestamp
+  };
+  const res = makeResponse();
+  await discordHandler(req, res);
+
+  assert.equal(res.statusCode, 200);
+  assert.deepEqual(JSON.parse(res.body), { type: 1 });
+});
