@@ -1,11 +1,11 @@
-import { getExercise } from "../_lib/db.js";
-import { sendJson } from "../_lib/http.js";
+import { getExercise } from "../../lib/db.js";
+import { sendJson } from "../../lib/http.js";
 import {
   editOriginalInteraction,
   privateErrorResponse,
   solutionInteractionPayload,
   verifyDiscordSignature
-} from "../_lib/discord.js";
+} from "../../lib/discord.js";
 
 export const config = { api: { bodyParser: false } };
 
