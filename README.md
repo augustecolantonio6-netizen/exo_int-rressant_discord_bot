@@ -26,7 +26,7 @@ Vercel Functions + Cron Jobs, Telegram Bot API, Discord Interactions + REST API,
 ### 2. Déployer sur Vercel
 
 1. Importe ce dépôt GitHub dans Vercel.
-2. Ajoute les variables ci-dessous dans **Settings → Environment Variables**.
+2. Ajoute les variables ci-dessous dans **Settings → Environment Variables**. Pour le premier déploiement, ne renseigne pas encore TELEGRAM_ADMIN_ID : tu le récupèreras juste après avec /id.
 3. Déploie le projet.
 
 | Variable | Valeur |
