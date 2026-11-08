@@ -1,8 +1,7 @@
 import { getActiveExercise, getRecentStatements, insertExercise, updateExercise } from "../_lib/db.js";
 import { generateVerifiedExercise } from "../_lib/gemini.js";
-import { isParisSixPm, parisDate } from "../_lib/http.js";
+import { isParisSixPm, parisDate, sendJson } from "../_lib/http.js";
 import { sendCandidate } from "../_lib/telegram.js";
-import { sendJson } from "../_lib/http.js";
 
 export default async function handler(req, res) {
   if (req.method !== "GET") return sendJson(res, 405, { error: "Method not allowed" });
