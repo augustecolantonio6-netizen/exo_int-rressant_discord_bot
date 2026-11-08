@@ -1,6 +1,11 @@
 import { getExercise } from "../_lib/db.js";
 import { sendJson } from "../_lib/http.js";
-import { privateErrorResponse, solutionInteractionResponse, verifyDiscordSignature } from "../_lib/discord.js";
+import {
+  editOriginalInteraction,
+  privateErrorResponse,
+  solutionInteractionPayload,
+  verifyDiscordSignature
+} from "../_lib/discord.js";
 
 export const config = { api: { bodyParser: false } };
 
@@ -29,12 +34,25 @@ export default async function handler(req, res) {
       if (!customId.startsWith("solution:")) {
         return sendJson(res, 200, privateErrorResponse("Ce bouton n'est pas reconnu."));
       }
-      const exerciseId = customId.slice("solution:".length);
-      const exercise = await getExercise(exerciseId);
-      if (!exercise || exercise.status !== "published") {
-        return sendJson(res, 200, privateErrorResponse("La solution n'est pas disponible."));
+
+      // Répondre tout de suite à Discord, puis remplir la réponse éphémère.
+      sendJson(res, 200, { type: 5, data: { flags: 64 } });
+      try {
+        const exerciseId = customId.slice("solution:".length);
+        const exercise = await getExercise(exerciseId);
+        if (!exercise || exercise.status !== "published") {
+          await editOriginalInteraction(interaction, { content: "La solution n'est pas disponible.", embeds: [] });
+          return;
+        }
+        await editOriginalInteraction(interaction, solutionInteractionPayload(exercise));
+      } catch (error) {
+        console.error("Could not deliver private Discord solution:", error);
+        await editOriginalInteraction(interaction, {
+          content: "Impossible de récupérer la solution pour le moment.",
+          embeds: []
+        }).catch(() => null);
       }
-      return sendJson(res, 200, solutionInteractionResponse(exercise));
+      return;
     }
 
     return sendJson(res, 200, privateErrorResponse("Interaction non prise en charge."));
