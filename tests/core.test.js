@@ -98,7 +98,8 @@ test("Paris date and UTC schedules handle winter and summer time", () => {
 });
 
 test("Gemini exercise validation requires all fields and caps message lengths", () => {
-  assert.deepEqual(validateExerciseCandidate(exercise), exercise);
+  const { id: _ignoredId, ...expectedCandidate } = exercise;
+  assert.deepEqual(validateExerciseCandidate(exercise), expectedCandidate);
   assert.throws(
     () => validateExerciseCandidate({ ...exercise, title: " " }),
     /title/
