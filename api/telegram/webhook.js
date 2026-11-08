@@ -188,6 +188,6 @@ export default async function handler(req, res) {
     return sendJson(res, 200, { ok: true });
   } catch (error) {
     console.error("Telegram webhook failed:", error);
-    return sendJson(res, 200, { ok: false, error: "Update processing failed" });
+    return sendJson(res, 500, { ok: false, error: "Update processing failed" });
   }
 }
