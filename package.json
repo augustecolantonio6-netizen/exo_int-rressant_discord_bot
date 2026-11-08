@@ -1,0 +1,11 @@
+{
+  "name": "exo-quotidien-discord-bot",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "dev": "vercel dev",
+    "check": "node --check api/cron/daily.js && node --check api/telegram/webhook.js && node --check api/discord/interactions.js"
+  }
+}
