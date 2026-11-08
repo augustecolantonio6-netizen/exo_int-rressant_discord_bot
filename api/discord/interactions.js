@@ -40,7 +40,7 @@ export default async function handler(req, res) {
       try {
         const exerciseId = customId.slice("solution:".length);
         const exercise = await getExercise(exerciseId);
-        if (!exercise || exercise.status !== "published") {
+        if (!exercise || !["published", "publishing"].includes(exercise.status) || !exercise.discord_message_id) {
           await editOriginalInteraction(interaction, { content: "La solution n'est pas disponible.", embeds: [] });
           return;
         }
