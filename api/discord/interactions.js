@@ -1,6 +1,7 @@
 import { getExercise } from "../../lib/db.js";
 import { sendJson } from "../../lib/http.js";
 import {
+  deferredEphemeralResponse,
   editOriginalInteraction,
   privateErrorResponse,
   solutionInteractionPayload,
@@ -36,7 +37,7 @@ export default async function handler(req, res) {
       }
 
       // Répondre tout de suite à Discord, puis remplir la réponse éphémère.
-      sendJson(res, 200, { type: 5, data: { flags: 64 } });
+      sendJson(res, 200, deferredEphemeralResponse());
       try {
         const exerciseId = customId.slice("solution:".length);
         const exercise = await getExercise(exerciseId);
