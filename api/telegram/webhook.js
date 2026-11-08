@@ -1,8 +1,8 @@
-import { getExercise, getRecentStatements, insertExercise, updateExercise } from "../_lib/db.js";
-import { generateVerifiedExercise } from "../_lib/gemini.js";
-import { readJson, sendJson } from "../_lib/http.js";
-import { answerCallback, editCandidate, sendCandidate, telegram } from "../_lib/telegram.js";
-import { publishExercise } from "../_lib/discord.js";
+import { getExercise, getRecentStatements, insertExercise, updateExercise } from "../../lib/db.js";
+import { generateVerifiedExercise } from "../../lib/gemini.js";
+import { readJson, sendJson } from "../../lib/http.js";
+import { answerCallback, editCandidate, sendCandidate, telegram } from "../../lib/telegram.js";
+import { publishExercise } from "../../lib/discord.js";
 
 function isAdmin(userId) {
   const allowed = process.env.TELEGRAM_ADMIN_ID;
