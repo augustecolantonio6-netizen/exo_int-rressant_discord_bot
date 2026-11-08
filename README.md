@@ -53,10 +53,15 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 1. Ouvre une conversation privée avec ton bot Telegram et envoie /start.
 2. Configure le webhook en remplaçant les valeurs :
 
-~~~bash
-curl -X POST "https://api.telegram.org/bot<TOKEN>/setWebhook" \
-  -H "Content-Type: application/json" \
-  -d '{"url":"https://<TON-DOMAINE-VERCEL>/api/telegram/webhook","secret_token":"<TELEGRAM_WEBHOOK_SECRET>"}'
+~~~powershell
+$body = @{
+  url = "https://<TON-DOMAINE-VERCEL>/api/telegram/webhook"
+  secret_token = "<TELEGRAM_WEBHOOK_SECRET>"
+} | ConvertTo-Json -Compress
+
+Invoke-RestMethod -Method Post `
+  -Uri "https://api.telegram.org/bot<TOKEN>/setWebhook" `
+  -ContentType "application/json" -Body $body
 ~~~
 
 3. Envoie /id au bot. Il répond avec ton identifiant numérique.
@@ -80,9 +85,11 @@ Le bot n'utilise pas de connexion Gateway persistante ni d'intents privilégiés
 
 Depuis un terminal, appelle manuellement le cron :
 
-~~~bash
-curl -H "Authorization: Bearer <CRON_SECRET>" \
-  "https://<TON-DOMAINE-VERCEL>/api/cron/daily?force=1"
+~~~powershell
+$headers = @{ Authorization = "Bearer <CRON_SECRET>" }
+Invoke-RestMethod -Method Get `
+  -Uri "https://<TON-DOMAINE-VERCEL>/api/cron/daily?force=1" `
+  -Headers $headers
 ~~~
 
 Tu dois recevoir une proposition sur Telegram. Essaie **Un autre exercice**, puis **Publier sur Discord**. Enfin, clique sur **Solution** : la réponse doit être privée.
