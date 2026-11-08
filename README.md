@@ -66,7 +66,7 @@ La commande /id reste disponible pour permettre la première configuration. Tout
 
 ### 4. Configurer Discord
 
-1. Dans le [Discord Developer Portal](https://discord.com/developers/applications), crée une application.
+1. Dans le [Discord Developer Portal](https://discord.com/developers/applications), crée une application pour ton serveur **LaTeX**.
 2. Dans **Bot**, crée le bot et copie son token dans DISCORD_BOT_TOKEN.
 3. Dans **General Information**, copie la **Public Key** dans DISCORD_PUBLIC_KEY.
 4. Invite le bot sur ton serveur via OAuth2. Il lui faut les permissions **Send Messages** et **Embed Links**.
