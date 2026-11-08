@@ -7,7 +7,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "dev": "vercel dev",
+    "dev": "npx vercel dev",
     "check": "node --check api/health.js && node --check lib/db.js && node --check lib/http.js && node --check lib/telegram.js && node --check lib/gemini.js && node --check lib/discord.js && node --check api/cron/daily.js && node --check api/telegram/webhook.js && node --check api/discord/interactions.js",
     "test": "node --test"
   }
