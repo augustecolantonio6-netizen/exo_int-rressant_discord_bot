@@ -1,0 +1,12 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "api/cron/daily.js": { "maxDuration": 60 },
+    "api/telegram/webhook.js": { "maxDuration": 60 },
+    "api/discord/interactions.js": { "maxDuration": 15 }
+  },
+  "crons": [
+    { "path": "/api/cron/daily", "schedule": "0 16 * * *" },
+    { "path": "/api/cron/daily", "schedule": "0 17 * * *" }
+  ]
+}
