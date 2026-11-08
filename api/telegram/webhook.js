@@ -13,8 +13,9 @@ async function handleCommand(message) {
   const text = String(message.text || "").trim();
   const chatId = message.chat?.id;
   const fromId = message.from?.id;
-  if (!chatId || !fromId) return;
+  if (!chatId || !fromId || message.chat?.type !== "private") return;
 
+  // /id is intentionally available before the admin ID is configured.
   if (text === "/id" || text.startsWith("/id@")) {
     await telegram("sendMessage", {
       chat_id: chatId,
@@ -32,7 +33,7 @@ async function handleCommand(message) {
   }
 
   if (!isAdmin(fromId)) return;
-  if (text === "/help" || text === "/help@exo_quotidien_bot") {
+  if (text === "/help" || text.startsWith("/help@")) {
     await telegram("sendMessage", {
       chat_id: chatId,
       text: "Commandes disponibles :\n/id — afficher ton identifiant\n/start — vérifier que le bot répond\n\nChaque jour, je t'envoie une proposition à valider."
