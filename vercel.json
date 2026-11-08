@@ -2,7 +2,7 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "functions": {
     "api/cron/daily.js": { "maxDuration": 300 },
-    "api/telegram/webhook.js": { "maxDuration": 60 },
+    "api/telegram/webhook.js": { "maxDuration": 300 },
     "api/discord/interactions.js": { "maxDuration": 60 }
   },
   "crons": [
