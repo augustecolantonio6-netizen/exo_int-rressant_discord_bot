@@ -26,3 +26,7 @@ on public.exercises (created_at desc);
 
 alter table public.exercises enable row level security;
 -- Aucune policy publique : seul le backend utilise la clé service_role.
+
+-- Explicit backend grants. The secret key maps to the service_role database role.
+grant usage on schema public to service_role;
+grant all on table public.exercises to service_role;
