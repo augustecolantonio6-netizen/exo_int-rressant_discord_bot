@@ -1,5 +1,5 @@
 import { getExercise } from "../_lib/db.js";
-import { readJson, sendJson } from "../_lib/http.js";
+import { sendJson } from "../_lib/http.js";
 import { privateErrorResponse, solutionInteractionResponse, verifyDiscordSignature } from "../_lib/discord.js";
 
 export const config = { api: { bodyParser: false } };
