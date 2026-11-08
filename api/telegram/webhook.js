@@ -56,19 +56,9 @@ async function publishPending(callback, exerciseId) {
   });
   if (!claimed) return;
 
+  let discordMessage;
   try {
-    const discordMessage = await publishExercise(exercise);
-    await updateExercise(exercise.id, "publishing", {
-      status: "published",
-      discord_message_id: String(discordMessage.id),
-      published_at: new Date().toISOString()
-    });
-    await telegram("editMessageText", {
-      chat_id: callback.message.chat.id,
-      message_id: callback.message.message_id,
-      text: "✅ Exercice publié sur Discord.",
-      reply_markup: { inline_keyboard: [] }
-    }).catch((error) => console.error("Could not update Telegram approval message:", error));
+    discordMessage = await publishExercise(exercise);
   } catch (error) {
     await updateExercise(exercise.id, "publishing", { status: "pending" }).catch(() => null);
     console.error("Discord publication failed:", error);
@@ -76,7 +66,39 @@ async function publishPending(callback, exerciseId) {
       chat_id: callback.message.chat.id,
       text: "La publication Discord a échoué. La proposition est restée disponible : réessaie le bouton."
     }).catch(() => null);
+    return;
   }
+
+  try {
+    const published = await updateExercise(exercise.id, "publishing", {
+      status: "published",
+      discord_message_id: String(discordMessage.id),
+      published_at: new Date().toISOString()
+    });
+    if (!published) throw new Error("Discord a reçu le message, mais le statut Supabase n'a pas été confirmé.");
+  } catch (error) {
+    // Garder le statut publishing pour empêcher une deuxième publication.
+    // On enregistre au mieux l'ID Discord afin que le bouton Solution reste utilisable.
+    await updateExercise(exercise.id, "publishing", {
+      discord_message_id: String(discordMessage.id),
+      published_at: new Date().toISOString()
+    }).catch(() => null);
+    console.error("Exercise published but Supabase status could not be finalized:", error);
+    await telegram("editMessageText", {
+      chat_id: callback.message.chat.id,
+      message_id: callback.message.message_id,
+      text: "✅ L'exercice a été publié sur Discord. Un problème de synchronisation est survenu ; ne relance pas la publication.",
+      reply_markup: { inline_keyboard: [] }
+    }).catch(() => null);
+    return;
+  }
+
+  await telegram("editMessageText", {
+    chat_id: callback.message.chat.id,
+    message_id: callback.message.message_id,
+    text: "✅ Exercice publié sur Discord.",
+    reply_markup: { inline_keyboard: [] }
+  }).catch((error) => console.error("Could not update Telegram approval message:", error));
 }
 
 async function regenerate(callback, exerciseId) {
