@@ -13,6 +13,8 @@ function discordPublicKey() {
 
 export function verifyDiscordSignature(rawBody, signature, timestamp) {
   if (!signature || !timestamp || !/^[a-f0-9]{128}$/i.test(signature)) return false;
+  const timestampSeconds = Number(timestamp);
+  if (!Number.isFinite(timestampSeconds) || Math.abs(Date.now() / 1000 - timestampSeconds) > 300) return false;
   try {
     return crypto.verify(
       null,
@@ -66,19 +68,15 @@ export async function publishExercise(exercise) {
   return data;
 }
 
-export function solutionInteractionResponse(exercise) {
+export function solutionInteractionPayload(exercise) {
   return {
-    type: 4,
-    data: {
-      flags: 64,
-      embeds: [{
-        title: `Solution — ${exercise.title}`.slice(0, 256),
-        description: exercise.solution.slice(0, 4000),
-        color: 0x57f287,
-        footer: { text: "Visible uniquement par toi" }
-      }],
-      allowed_mentions: { parse: [] }
-    }
+    embeds: [{
+      title: `Solution — ${exercise.title}`.slice(0, 256),
+      description: exercise.solution.slice(0, 4000),
+      color: 0x57f287,
+      footer: { text: "Visible uniquement par toi" }
+    }],
+    allowed_mentions: { parse: [] }
   };
 }
 
@@ -91,4 +89,20 @@ export function privateErrorResponse(message) {
       allowed_mentions: { parse: [] }
     }
   };
+}
+
+export async function editOriginalInteraction(interaction, payload) {
+  if (!interaction.application_id || !interaction.token) {
+    throw new Error("Discord interaction token incomplet.");
+  }
+  const url = `https://discord.com/api/v10/webhooks/${interaction.application_id}/${interaction.token}/messages/@original`;
+  const response = await fetch(url, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`Discord interaction follow-up ${response.status}: ${body.slice(0, 500)}`);
+  }
 }
