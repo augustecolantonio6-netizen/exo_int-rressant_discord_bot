@@ -86,7 +86,7 @@ test("Paris date and UTC schedules handle winter and summer time", () => {
   const summerBackup = new Date("2026-07-01T17:30:00.000Z");
   const winter = new Date("2026-01-15T17:30:00.000Z");
   const winterTooEarly = new Date("2026-01-15T16:30:00.000Z");
-  const tooLate = new Date("2026-01-15T18:30:00.000Z");
+  const tooLate = new Date("2026-01-15T19:30:00.000Z");
 
   assert.equal(parisDate(summer), "2026-07-01");
   assert.equal(isParisSixPm(summer), true);
@@ -176,7 +176,7 @@ test("Telegram candidate fits message limits and has the two expected actions", 
 test("Discord deferred response is ephemeral and solution payload contains no public message flags", () => {
   assert.deepEqual(deferredEphemeralResponse(), { type: 5, data: { flags: 64 } });
   const payload = solutionInteractionPayload(exercise);
-  assert.match(payload.embeds[0].description, /obtenir 4/);
+  assert.match(payload.embeds[0].description, /obtient 4/);
   assert.equal("flags" in payload, false);
 });
 
@@ -361,7 +361,7 @@ test("Discord interaction endpoint acknowledges a private response before loadin
   assert.match(calls[0].url, /rest\/v1\/exercises/);
   assert.match(calls[1].url, /messages\/@original/);
   const edited = JSON.parse(calls[1].options.body);
-  assert.match(edited.embeds[0].description, /obtenir 4/);
+  assert.match(edited.embeds[0].description, /obtient 4/);
   assert.equal("flags" in edited, false);
 });
 
